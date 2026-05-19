@@ -1,0 +1,17 @@
+[Unit]
+Description=Claude live dashboard for Waveshare 3.5" SPI LCD
+After=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/claude-dashboard
+ExecStart=/usr/bin/python3 %h/claude-dashboard/dashboard.py --fps 12
+Restart=on-failure
+RestartSec=3
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=5
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target
