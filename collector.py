@@ -148,7 +148,7 @@ class Collector:
     def _parse(self, path: str) -> list[Record]:
         out: list[Record] = []
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 for line in f:
                     try:
                         d = json.loads(line)
