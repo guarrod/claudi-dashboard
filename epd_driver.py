@@ -40,6 +40,7 @@ class EPDDriver:
         if self._png:
             img.save(self._png)
             print(f"wrote {self._png}")
+            return
         if self._epd:
             self._epd.display(self._epd.getbuffer(img.convert("1")))
 
