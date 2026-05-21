@@ -88,7 +88,7 @@ def build_frame(snap: Snapshot) -> Image.Image:
     d.text((4, 2), "CLAUDE", fill=0, font=font(T.F_MED, bold=True))
     d.text((72, 4), _short_model(snap.session.get("model") or ""),
            fill=T.GRAY[0], font=font(T.F_SMALL))
-    d.text((T.WIDTH - 4, 2), snap.now.strftime("%H:%M"),
+    d.text((T.WIDTH - 4, 2), snap.now.astimezone().strftime("%H:%M"),
            fill=0, font=font(T.F_MED, bold=True), anchor="ra")
     d.line([(0, 20), (T.WIDTH, 20)], fill=0, width=1)
 
