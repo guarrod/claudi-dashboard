@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import DashboardScreen from '../screens/app/DashboardScreen';
 import SprintScreen from '../screens/app/SprintScreen';
+import NotificationsScreen from '../screens/app/NotificationsScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -31,6 +32,17 @@ const SprintStack = () => (
   </Stack.Navigator>
 );
 
+const NotificationsStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: true,
+      headerTitle: 'Notificaciones',
+    }}
+  >
+    <Stack.Screen name="NotificationsHome" component={NotificationsScreen} />
+  </Stack.Navigator>
+);
+
 const SettingsStack = () => (
   <Stack.Navigator
     screenOptions={{
@@ -52,6 +64,8 @@ const AppNavigator = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Sprint') {
             iconName = focused ? 'list' : 'list-outline';
+          } else if (route.name === 'Notifications') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Settings') {
             iconName = focused ? 'settings' : 'settings-outline';
           }
@@ -71,6 +85,11 @@ const AppNavigator = () => {
         name="Sprint"
         component={SprintStack}
         options={{ tabBarLabel: 'Sprint' }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsStack}
+        options={{ tabBarLabel: 'Notificaciones' }}
       />
       <Tab.Screen
         name="Settings"
