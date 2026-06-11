@@ -13,9 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import apiClient from '../../config/api';
 import TransactionItem from '../../components/TransactionItem';
 import CreateTransactionModal from '../../components/CreateTransactionModal';
+import SprintCompletionModal from '../../components/SprintCompletionModal';
 import { setTransactions, updateTransaction } from '../../redux/slices/transactionSlice';
+import { setActiveSprint } from '../../redux/slices/sprintSlice';
 
-const SprintScreen = () => {
+const SprintScreen = ({ navigation }) => {
   const { user } = useSelector((state) => state.auth);
   const { activeSprint } = useSelector((state) => state.sprint);
   const { completionMethod } = useSelector((state) => state.ui);
@@ -26,6 +28,7 @@ const SprintScreen = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -98,6 +101,23 @@ const SprintScreen = () => {
     }
   };
 
+  const mainAccount =
+    accounts.find((a) => a.account_type === 'BANK') || accounts[0];
+
+  const handleCompleteSprint = async ({ save_amount }) => {
+    const params = new URLSearchParams({
+      user_id: user.id,
+      account_id: mainAccount.id,
+    });
+    if (save_amount > 0) {
+      params.append('save_amount', save_amount);
+    }
+    await apiClient.post(
+      `/savings/${activeSprint.id}/complete-and-save?${params.toString()}`
+    );
+    dispatch(setActiveSprint(null));
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -123,12 +143,20 @@ const SprintScreen = () => {
             Sprint {activeSprint?.sprint_number || '?'}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.templatesButton}
+            onPress={() => navigation.navigate('Templates')}
+          >
+            <Ionicons name="bookmark-outline" size={22} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Ionicons name="add" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -183,12 +211,31 @@ const SprintScreen = () => {
         scrollEnabled={false}
       />
 
+      {activeSprint?.status === 'ACTIVE' && mainAccount && (
+        <TouchableOpacity
+          style={styles.completeSprintButton}
+          onPress={() => setCompletionModalVisible(true)}
+        >
+          <Ionicons name="checkmark-circle" size={22} color="#fff" />
+          <Text style={styles.completeSprintText}>Completar Sprint</Text>
+        </TouchableOpacity>
+      )}
+
       <CreateTransactionModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSubmit={handleCreateTransaction}
         accounts={accounts}
         categories={categories}
+      />
+
+      <SprintCompletionModal
+        visible={completionModalVisible}
+        onClose={() => setCompletionModalVisible(false)}
+        onSubmit={handleCompleteSprint}
+        sprint={activeSprint}
+        account={mainAccount}
+        remainingBalance={mainAccount?.available_balance || 0}
       />
     </View>
   );
@@ -224,6 +271,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  templatesButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f0f7ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   addButton: {
     width: 44,
     height: 44,
@@ -231,6 +291,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  completeSprintButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#34C759',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  completeSprintText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContent: {
     padding: 16,

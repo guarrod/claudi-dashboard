@@ -7,10 +7,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from sqlalchemy.orm import Session
-from models.user import User
-from models.transaction import Transaction
-from models.notification import Notification
-from models.sprint import Sprint
+from app.models.user import User
+from app.models.transaction import Transaction
+from app.models.notification import Notification
+from app.models.sprint import Sprint
 
 
 class GmailService:

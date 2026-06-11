@@ -7,6 +7,7 @@ from .category import Category
 from .notification import Notification
 from .card_statement import CardStatement
 from .detection_rule import DetectionRule
+from .savings import SavingsMovement
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "Notification",
     "CardStatement",
     "DetectionRule",
+    "SavingsMovement",
 ]

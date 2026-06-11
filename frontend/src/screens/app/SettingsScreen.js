@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setTheme, setCompletionMethod, setRequiresConfirmation } from '../../redux/slices/uiSlice';
 import { logout } from '../../redux/slices/authSlice';
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { theme, completionMethod, requiresConfirmation } = useSelector((state) => state.ui);
 
@@ -63,6 +63,17 @@ const SettingsScreen = () => {
         >
           <Text style={styles.optionText}>Ambos</Text>
           {completionMethod === 'BOTH' && <Text style={styles.checkmark}>✓</Text>}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Gastos</Text>
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={() => navigation.navigate('Templates')}
+        >
+          <Text style={styles.optionText}>Plantillas de Gastos</Text>
+          <Text style={styles.checkmark}>›</Text>
         </TouchableOpacity>
       </View>
 

@@ -157,15 +157,16 @@ const NotificationsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
                   <Ionicons
-                    name={getIconName(notification.type)}
+                    name={getIconName(notification.notification_type)}
                     size={24}
                     color="#007AFF"
                   />
                 </View>
                 <View style={styles.contentContainer}>
                   <Text style={styles.notificationTitle}>
-                    {notification.content.concept ||
-                      'Gasto Detectado'}
+                    {notification.notification_type === 'EXPENSE_DETECTED'
+                      ? 'Gasto Detectado'
+                      : 'Notificación'}
                   </Text>
                   <Text style={styles.notificationDate}>
                     {new Date(
@@ -175,18 +176,11 @@ const NotificationsScreen = () => {
                 </View>
               </View>
 
-              {notification.content.amount && (
-                <Text style={styles.amount}>
-                  ${notification.content.amount.toFixed(2)}
-                </Text>
-              )}
+              <Text style={styles.notificationContent}>
+                {notification.content}
+              </Text>
 
-              {notification.content.source && (
-                <Text style={styles.source}>
-                  Detectado en:{' '}
-                  {notification.content.source}
-                </Text>
-              )}
+              <Text style={styles.source}>Detectado en tu email</Text>
 
               <View style={styles.actionButtons}>
                 <TouchableOpacity
@@ -233,11 +227,11 @@ const NotificationsScreen = () => {
 const getIconName = (type) => {
   switch (type) {
     case 'EXPENSE_DETECTED':
-      return 'card';
-    case 'CARD_STATEMENT':
-      return 'credit';
+      return 'card-outline';
+    case 'CARD_UPDATED':
+      return 'wallet-outline';
     default:
-      return 'notification';
+      return 'notifications-outline';
   }
 };
 
@@ -311,9 +305,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
-  amount: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  notificationContent: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#007AFF',
     marginBottom: 8,
   },

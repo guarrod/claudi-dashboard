@@ -247,7 +247,7 @@ pip install -r requirements.txt
 
 **Error: "Port 8000 already in use"**
 ```bash
-# Cambiar puerto en app/main.py
+# Cambiar puerto en main.py
 uvicorn.run(..., port=8001)
 ```
 

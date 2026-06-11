@@ -1,8 +1,8 @@
 import re
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from models.transaction import Transaction
-from models.category import Category
+from app.models.transaction import Transaction
+from app.models.category import Category
 from pydantic import BaseModel
 
 

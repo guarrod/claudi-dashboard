@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from database import get_db
-from config import settings
-from models.user import User
+from app.database import get_db
+from app.config import settings
+from app.models.user import User
 from google.auth.transport.requests import Request
 from google.oauth2.id_token import verify_oauth2_token
 import os

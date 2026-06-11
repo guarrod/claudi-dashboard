@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, date, timedelta
-from database import get_db
-from models.sprint import Sprint
-from models.user import User
+from app.database import get_db
+from app.models.sprint import Sprint
+from app.models.user import User
 from pydantic import BaseModel
 
 router = APIRouter()

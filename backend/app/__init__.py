@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from config import settings
-from database import Base, engine
+from app.config import settings
+from app.database import Base, engine
+
+# Import models so their tables are registered before create_all
+from app import models  # noqa: F401
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -21,7 +24,7 @@ app.add_middleware(
 )
 
 # Import routes
-from routes import auth, sprints, transactions, categories, gmail, detection_rules, accounts
+from app.routes import auth, sprints, transactions, categories, gmail, detection_rules, accounts, templates, savings
 
 
 # Include routers
@@ -32,6 +35,8 @@ app.include_router(categories.router, prefix="/categories", tags=["categories"])
 app.include_router(accounts.router, prefix="/accounts", tags=["accounts"])
 app.include_router(gmail.router, prefix="/gmail", tags=["gmail"])
 app.include_router(detection_rules.router, prefix="/rules", tags=["detection_rules"])
+app.include_router(templates.router, prefix="/templates", tags=["templates"])
+app.include_router(savings.router, prefix="/savings", tags=["savings"])
 
 
 @app.get("/")

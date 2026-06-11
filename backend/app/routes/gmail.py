@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
-from database import get_db
-from models.user import User
-from models.card_statement import CardStatement
-from models.notification import Notification
-from services.gmail_service import GmailService
+from app.database import get_db
+from app.models.user import User
+from app.models.card_statement import CardStatement
+from app.models.notification import Notification
+from app.models.transaction import Transaction
+from app.services.gmail_service import GmailService
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -16,8 +17,8 @@ class CardStatementResponse(BaseModel):
     user_id: int
     card_name: str
     available_balance: float
-    current_balance: float = None
-    active_balance: float = None
+    current_balance: float | None = None
+    active_balance: float | None = None
     statement_date: str
 
     class Config:
@@ -30,6 +31,7 @@ class NotificationResponse(BaseModel):
     notification_type: str
     content: str
     status: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -144,6 +146,17 @@ def confirm_notification(notification_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Notification not found")
 
     notification.status = "CONFIRMED"
+
+    # If linked to a transaction, mark it as completed (detected + validated)
+    if notification.transaction_id:
+        transaction = db.query(Transaction).filter(
+            Transaction.id == notification.transaction_id
+        ).first()
+        if transaction:
+            transaction.status = "COMPLETED"
+            transaction.completed_date = datetime.utcnow().date()
+            transaction.completion_method = "DETECTED_VALIDATED"
+
     db.commit()
     db.refresh(notification)
 

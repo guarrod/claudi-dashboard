@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from database import get_db
-from models.user import User
-from models.detection_rule import DetectionRule
+from app.database import get_db
+from app.models.user import User
+from app.models.detection_rule import DetectionRule
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 
 class DetectionRuleCreate(BaseModel):
     pattern: str  # Regex pattern
-    category_id: int = None
+    category_id: int | None = None
     requires_confirmation: bool = True
 
 
@@ -18,7 +18,7 @@ class DetectionRuleResponse(BaseModel):
     id: int
     user_id: int
     pattern: str
-    category_id: int = None
+    category_id: int | None = None
     requires_confirmation: bool
 
     class Config:

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
-from database import Base
+from app.database import Base
 
 
 class Transaction(Base):
@@ -10,7 +10,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     sprint_id = Column(Integer, ForeignKey("sprints.id"), nullable=False)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     template_id = Column(Integer, ForeignKey("expense_templates.id"), nullable=True)
 

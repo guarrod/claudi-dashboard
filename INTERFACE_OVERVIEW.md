@@ -464,7 +464,7 @@ python main.py
 
 # Frontend (React Native + Expo)
 cd frontend
-npm install --legacy-peer-deps
+npm install
 npm start
 # O para Web:
 npm run web

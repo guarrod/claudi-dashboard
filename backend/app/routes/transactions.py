@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import date
-from database import get_db
-from models.transaction import Transaction
-from models.sprint import Sprint
-from models.account import Account
-from models.user import User
+from app.database import get_db
+from app.models.transaction import Transaction
+from app.models.sprint import Sprint
+from app.models.account import Account
+from app.models.user import User
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -16,24 +17,24 @@ class TransactionCreate(BaseModel):
     account_id: int
     concept: str
     amount: float
-    category_id: int = None
-    template_id: int = None
+    category_id: int | None = None
+    template_id: int | None = None
     transaction_type: str = "EXPENSE"
-    planned_date: date = None
+    planned_date: date | None = None
 
 
 class TransactionResponse(BaseModel):
     id: int
     user_id: int
     sprint_id: int
-    account_id: int
+    account_id: int | None = None
     concept: str
     amount: float
     status: str
     transaction_type: str
-    completion_method: str = None
-    planned_date: date = None
-    completed_date: date = None
+    completion_method: str | None = None
+    planned_date: date | None = None
+    completed_date: date | None = None
 
     class Config:
         from_attributes = True
@@ -90,7 +91,7 @@ def get_sprint_transactions(user_id: int, sprint_id: int, db: Session = Depends(
     return transactions
 
 
-@router.patch("/{transaction_id}/complete")
+@router.patch("/{transaction_id}/complete", response_model=TransactionResponse)
 def complete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     """Mark transaction as completed"""
     transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
@@ -109,7 +110,7 @@ def complete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     return transaction
 
 
-@router.patch("/{transaction_id}/uncomplete")
+@router.patch("/{transaction_id}/uncomplete", response_model=TransactionResponse)
 def uncomplete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     """Mark transaction as not completed (return to PLANNED)"""
     transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
@@ -154,7 +155,7 @@ def _recalculate_available_balance(db: Session, account_id: int):
                 Transaction.account_id == account_id,
                 Transaction.status == "COMPLETED",
                 Transaction.transaction_type == "EXPENSE",
-            ).with_entities(db.func.sum(Transaction.amount)).scalar() or 0
+            ).with_entities(func.sum(Transaction.amount)).scalar() or 0
         )
 
         account.available_balance = account.current_balance - completed_sum

@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import DashboardScreen from '../screens/app/DashboardScreen';
 import SprintScreen from '../screens/app/SprintScreen';
 import NotificationsScreen from '../screens/app/NotificationsScreen';
+import SavingsScreen from '../screens/app/SavingsScreen';
+import TemplatesScreen from '../screens/app/TemplatesScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -29,6 +31,11 @@ const SprintStack = () => (
     }}
   >
     <Stack.Screen name="SprintHome" component={SprintScreen} />
+    <Stack.Screen
+      name="Templates"
+      component={TemplatesScreen}
+      options={{ headerTitle: 'Plantillas' }}
+    />
   </Stack.Navigator>
 );
 
@@ -43,6 +50,17 @@ const NotificationsStack = () => (
   </Stack.Navigator>
 );
 
+const SavingsStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: true,
+      headerTitle: 'Ahorros',
+    }}
+  >
+    <Stack.Screen name="SavingsHome" component={SavingsScreen} />
+  </Stack.Navigator>
+);
+
 const SettingsStack = () => (
   <Stack.Navigator
     screenOptions={{
@@ -51,6 +69,11 @@ const SettingsStack = () => (
     }}
   >
     <Stack.Screen name="SettingsHome" component={SettingsScreen} />
+    <Stack.Screen
+      name="Templates"
+      component={TemplatesScreen}
+      options={{ headerTitle: 'Plantillas' }}
+    />
   </Stack.Navigator>
 );
 
@@ -66,6 +89,8 @@ const AppNavigator = () => {
             iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'Notifications') {
             iconName = focused ? 'notifications' : 'notifications-outline';
+          } else if (route.name === 'Savings') {
+            iconName = focused ? 'cash' : 'cash-outline';
           } else if (route.name === 'Settings') {
             iconName = focused ? 'settings' : 'settings-outline';
           }
@@ -89,12 +114,17 @@ const AppNavigator = () => {
       <Tab.Screen
         name="Notifications"
         component={NotificationsStack}
-        options={{ tabBarLabel: 'Notificaciones' }}
+        options={{ tabBarLabel: 'Alertas' }}
+      />
+      <Tab.Screen
+        name="Savings"
+        component={SavingsStack}
+        options={{ tabBarLabel: 'Ahorros' }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsStack}
-        options={{ tabBarLabel: 'Configuración' }}
+        options={{ tabBarLabel: 'Config' }}
       />
     </Tab.Navigator>
   );

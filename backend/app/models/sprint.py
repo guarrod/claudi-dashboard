@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
-from database import Base
+from app.database import Base
 
 
 class Sprint(Base):
