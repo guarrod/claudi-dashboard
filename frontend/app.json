@@ -15,7 +15,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTabletMode": true,
+      "supportsTablet": true,
       "bundleIdentifier": "com.guarrodstudio.presupuesto"
     },
     "android": {
@@ -29,9 +29,6 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": "presupuesto",
-    "plugins": [
-      "expo-auth-session"
-    ],
     "extra": {
       "apiUrl": "http://localhost:8000"
     }
