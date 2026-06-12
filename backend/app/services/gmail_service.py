@@ -104,7 +104,7 @@ class GmailService:
         past_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y/%m/%d")
         query = f"after:{past_date}"
 
-        emails = self.get_emails(query=query, max_results=20)
+        emails = self.get_emails(query=query, max_results=50)
         synced_count = 0
 
         for email in emails:
@@ -143,7 +143,7 @@ class GmailService:
         patterns = [
             {
                 "name": "debit_card",
-                "regex": r"(?:transacci[óo]n|compra|pago|d[ée]bito).*?[\$usd]?\s*(\d+(?:[.,]\d{2})?)",
+                "regex": r"(?:consumo|transacci[óo]n|compra|pago|d[ée]bito).*?[\$usd]?\s*(\d+(?:[.,]\d{2})?)",
                 "concept_prefix": "Compra/Débito",
             },
             {
@@ -166,7 +166,7 @@ class GmailService:
         for pattern in patterns:
             match = re.search(pattern["regex"], combined)
             if match:
-                amount_str = match.group(-1)  # Get last group (amount)
+                amount_str = match.groups()[-1]  # Last group is the amount
                 amount = float(amount_str.replace(",", "."))
 
                 # Get concept from email subject if available
