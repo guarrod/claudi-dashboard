@@ -18,7 +18,12 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const response = await apiClient.post('/auth/login', { email });
-      dispatch(loginSuccess(response.data));
+      dispatch(
+        loginSuccess({
+          id: response.data.user_id,
+          email: response.data.email,
+        })
+      );
     } catch (error) {
       alert('Error al iniciar sesión: ' + error.message);
     } finally {
