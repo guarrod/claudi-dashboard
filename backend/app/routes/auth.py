@@ -1,11 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.database import get_db
 from app.config import settings
 from app.models.user import User
 from google.auth.transport.requests import Request
 from google.oauth2.id_token import verify_oauth2_token
 import os
+
+
+class LoginRequest(BaseModel):
+    email: str
 
 router = APIRouter()
 
@@ -75,11 +80,11 @@ def google_callback(code: str = Query(...), state: str = Query(...), db: Session
 
 
 @router.post("/login")
-def login(email: str, db: Session = Depends(get_db)):
+def login(req: LoginRequest, db: Session = Depends(get_db)):
     """Simple login (for development)"""
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == req.email).first()
     if not user:
-        user = User(email=email)
+        user = User(email=req.email)
         db.add(user)
         db.commit()
         db.refresh(user)
