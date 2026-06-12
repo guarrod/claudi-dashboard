@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from sqlalchemy.orm import Session
+from app.config import settings
 from app.models.user import User
 from app.models.transaction import Transaction
 from app.models.notification import Notification
@@ -29,8 +30,8 @@ class GmailService:
             token=None,
             refresh_token=self.user.google_refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
-            client_id="YOUR_CLIENT_ID",  # Should come from config
-            client_secret="YOUR_CLIENT_SECRET",  # Should come from config
+            client_id=settings.google_client_id,
+            client_secret=settings.google_client_secret,
         )
 
         # Refresh if needed
