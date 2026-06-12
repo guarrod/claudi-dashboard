@@ -39,18 +39,6 @@ const SprintScreen = ({ navigation }) => {
     }
   }, [activeSprint, user]);
 
-  const handleCreateSprints = async () => {
-    try {
-      setLoading(true);
-      await apiClient.post(`/sprints/${user.id}/auto-create`);
-      const res = await apiClient.get(`/sprints/${user.id}/active`);
-      dispatch(setActiveSprint(res.data));
-    } catch (error) {
-      console.error('Error creating sprints:', error);
-      setLoading(false);
-    }
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -65,6 +53,18 @@ const SprintScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSprints = async () => {
+    try {
+      setLoading(true);
+      await apiClient.post(`/sprints/${user.id}/auto-create`);
+      const res = await apiClient.get(`/sprints/${user.id}/active`);
+      dispatch(setActiveSprint(res.data));
+    } catch (error) {
+      console.error('Error creating sprints:', error);
       setLoading(false);
     }
   };
