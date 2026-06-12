@@ -34,8 +34,22 @@ const SprintScreen = ({ navigation }) => {
   useEffect(() => {
     if (activeSprint?.id && user?.id) {
       fetchData();
+    } else {
+      setLoading(false);
     }
   }, [activeSprint, user]);
+
+  const handleCreateSprints = async () => {
+    try {
+      setLoading(true);
+      await apiClient.post(`/sprints/${user.id}/auto-create`);
+      const res = await apiClient.get(`/sprints/${user.id}/active`);
+      dispatch(setActiveSprint(res.data));
+    } catch (error) {
+      console.error('Error creating sprints:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -122,6 +136,23 @@ const SprintScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (!activeSprint) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="calendar-outline" size={48} color="#ddd" />
+        <Text style={styles.emptyText}>No hay sprint activo</Text>
+        <TouchableOpacity
+          style={styles.createSprintButton}
+          onPress={handleCreateSprints}
+        >
+          <Text style={styles.completeSprintText}>
+            Crear sprints de este mes
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -307,6 +338,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  createSprintButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
   },
   listContent: {
     padding: 16,
