@@ -28,14 +28,23 @@ const DashboardScreen = () => {
 
   const fetchData = async () => {
     try {
-      const [sprintRes, accRes] = await Promise.all([
-        apiClient.get(`/sprints/${user.id}/active`),
-        apiClient.get(`/accounts/${user.id}`),
-      ]);
-      dispatch(setActiveSprint(sprintRes.data));
-      setAccounts(accRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      setLoading(true);
+
+      try {
+        const sprintRes = await apiClient.get(`/sprints/${user.id}/active`);
+        dispatch(setActiveSprint(sprintRes.data));
+      } catch (sprintError) {
+        console.error('Error fetching sprint:', sprintError);
+        dispatch(setActiveSprint(null));
+      }
+
+      try {
+        const accRes = await apiClient.get(`/accounts/${user.id}`);
+        setAccounts(accRes.data || []);
+      } catch (accError) {
+        console.error('Error fetching accounts:', accError);
+        setAccounts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -61,9 +70,9 @@ const DashboardScreen = () => {
       )
     : 0;
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.current_balance, 0);
+  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
   const totalAvailable = accounts.reduce(
-    (sum, acc) => sum + acc.available_balance,
+    (sum, acc) => sum + (acc.available_balance || 0),
     0
   );
 
@@ -170,7 +179,7 @@ const DashboardScreen = () => {
               </View>
               <View style={styles.accountBalance}>
                 <Text style={styles.balanceSmall}>
-                  ${account.available_balance.toFixed(2)}
+                  ${(account.available_balance || 0).toFixed(2)}
                 </Text>
                 <Text style={styles.balanceLabel}>disponible</Text>
               </View>
