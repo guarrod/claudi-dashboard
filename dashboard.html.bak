@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude · Telemetría — 5" / 1024×600</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0F12; --ink-2:#0E151A; --line:#1C2730;
+    --amber:#FF8A3D; --amber-dim:#5A3A22; --cyan:#36D9C4; --cyan-dim:#1A3E3A;
+    --hot:#FF3D6E; --paper:#E9E7E0; --mute:#5E6F79; --mute-2:#3A4750;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 120% at 50% 0%, #14171a 0%, #070a0c 60%, #040506 100%);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    font-family:"JetBrains Mono",monospace;padding:0;
+  }
+  .screen{
+    width:100vw;height:100vh;
+    background:linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 32px, var(--ink);
+    background-blend-mode:soft-light;border-radius:0;overflow:hidden;position:relative;
+    display:grid;grid-template-rows:54px 1fr 150px;color:var(--paper);
+  }
+  .screen::after{content:"";position:absolute;inset:0;pointer-events:none;
+    box-shadow:0 0 90px 14px rgba(0,0,0,.5) inset;border-radius:0}
+
+  /* ===== topbar ===== */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg, rgba(255,138,61,.05), transparent)}
+  .brand{display:flex;align-items:baseline;gap:11px}
+  .brand .mark{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em}
+  .brand .sub{font-size:11px;letter-spacing:.34em;color:var(--mute);text-transform:uppercase}
+  .topright{display:flex;align-items:center;gap:22px}
+  .chip{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.05em}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);
+    animation:breathe 2.6s ease-in-out infinite}
+  .live{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.18em;color:var(--hot);font-weight:700}
+  .live .ldot{width:8px;height:8px;border-radius:50%;background:var(--hot);box-shadow:0 0 9px var(--hot);
+    animation:pulse 1.3s ease-in-out infinite}
+  .clock{font-size:14px;color:var(--mute);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+  .clock b{color:var(--amber);font-weight:500}
+
+  /* ===== cuerpo: 3 columnas ===== */
+  .main{display:grid;grid-template-columns:320px 392px 312px;min-height:0}
+  .colA,.colB{border-right:1px solid var(--line)}
+
+  /* columna A · gauge */
+  .colA{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px}
+  .gauge-wrap{position:relative;width:218px;height:218px}
+  .gauge-wrap svg{transform:rotate(-90deg);overflow:visible;width:100%;height:100%}
+  .g-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .g-num{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:62px;line-height:.9;
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .g-num .pct{font-size:24px;color:var(--amber);margin-left:2px;vertical-align:top}
+  .g-tag{font-size:11px;letter-spacing:.30em;color:var(--mute);text-transform:uppercase;margin-top:6px}
+  .g-left{font-size:12px;color:var(--cyan);margin-top:4px;letter-spacing:.04em}
+  .burn{margin-top:14px;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--mute);letter-spacing:.04em}
+  .burn b{color:var(--amber);font-weight:700;font-size:15px}
+  .reset{margin-top:5px;font-size:11px;letter-spacing:.10em;color:var(--mute-2);text-transform:uppercase}
+  .reset b{color:var(--paper);font-weight:500}
+
+  /* columna B · día + semana */
+  .colB{display:grid;grid-template-rows:1fr 100px;min-height:0}
+  .daychart{padding:14px 18px 8px;display:flex;flex-direction:column;min-height:0}
+  .blk-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .blk-head .lab{font-size:11px;letter-spacing:.22em;color:var(--mute);text-transform:uppercase}
+  .blk-head .peak{font-size:11px;letter-spacing:.05em;color:var(--mute)}
+  .blk-head .peak b{color:var(--amber);font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13px}
+  .daychart svg{width:100%;flex:1;display:block;min-height:0}
+  #dayline{stroke:var(--amber);stroke-width:2;fill:none;vector-effect:non-scaling-stroke;
+    filter:drop-shadow(0 0 4px rgba(255,138,61,.4))}
+  #peakdot{fill:var(--amber);filter:drop-shadow(0 0 5px rgba(255,138,61,.8))}
+
+  .weekcell{border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 18px}
+  .meter{flex:1;min-width:0}
+  .meter-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .meter-head .lab{font-size:11px;letter-spacing:.22em;color:var(--mute);text-transform:uppercase}
+  .meter-head .val{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:17px;
+    font-variant-numeric:tabular-nums}
+  .meter-head .val .est{color:var(--mute);font-weight:400;font-size:12px}
+  .track{height:9px;border-radius:5px;background:var(--ink-2);border:1px solid var(--line);overflow:hidden}
+  .fill{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan));
+    transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .mascot{display:flex;flex-direction:column;align-items:center;gap:3px;flex:0 0 auto;pointer-events:none}
+  .mascot canvas{image-rendering:pixelated;width:54px;height:auto}
+  .m-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+
+  /* columna C · tokens + caché + modelos */
+  .colC{display:flex;flex-direction:column;justify-content:space-evenly;padding:16px 18px}
+  .tk-head{font-size:11px;letter-spacing:.22em;color:var(--mute);text-transform:uppercase;margin-bottom:11px}
+  .tk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .tk{display:flex;flex-direction:column;gap:5px}
+  .tk .tk-lab{font-size:10px;letter-spacing:.14em;color:var(--mute-2);text-transform:uppercase;
+    display:flex;align-items:center;gap:5px}
+  .tk .tk-lab i{width:7px;height:7px;border-radius:2px;display:inline-block}
+  .tk .tk-num{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:30px;
+    color:var(--paper);font-variant-numeric:tabular-nums;line-height:1}
+  .tk .tk-unit{font-size:15px;color:var(--mute);font-weight:400;margin-left:2px}
+  .cache-eff{display:flex;align-items:center;gap:9px;margin-top:13px}
+  .ce-lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute-2);white-space:nowrap}
+  .ce-track{flex:1;height:7px;border-radius:4px;background:var(--ink-2);border:1px solid var(--line);overflow:hidden}
+  .ce-fill{height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,#2A5C72,var(--cyan));
+    transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .ce-val{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;color:var(--cyan);font-variant-numeric:tabular-nums}
+  .divider{height:1px;background:var(--line)}
+  .mix-head{font-size:11px;letter-spacing:.22em;color:var(--mute);text-transform:uppercase;margin-bottom:9px}
+  .mix-bar{height:11px;border-radius:6px;overflow:hidden;display:flex;background:var(--ink-2);border:1px solid var(--line)}
+  .mix-seg{height:100%;width:0;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .mix-legend{display:flex;gap:16px;margin-top:9px}
+  .mix-legend span{display:flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.03em;color:var(--mute)}
+  .mix-legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .mix-legend b{color:var(--paper);font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* ===== franja inferior: 3 paneles ===== */
+  .bottom{display:grid;grid-template-columns:372px 372px 1fr;border-top:1px solid var(--line)}
+  .pnl{padding:13px 18px;display:flex;flex-direction:column;justify-content:center;gap:9px}
+  .pnl.bdr{border-right:1px solid var(--line)}
+  .pnl-head{display:flex;justify-content:space-between;align-items:baseline}
+  .pnl-head .ph-lab{font-size:11px;letter-spacing:.20em;color:var(--mute);text-transform:uppercase}
+  .pnl-head .ph-val{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15px;
+    color:var(--paper);font-variant-numeric:tabular-nums}
+  .pnl-head .ph-tag{font-size:9px;letter-spacing:.12em;color:var(--mute-2);text-transform:uppercase}
+
+  .cmp{display:flex;flex-direction:column;gap:8px}
+  .cmp-row{display:grid;grid-template-columns:54px 1fr 42px 42px;align-items:center;gap:10px}
+  .cmp-name{font-size:11px;letter-spacing:.04em;color:var(--mute)}
+  .cmp-row.me .cmp-name{color:var(--paper);font-weight:500}
+  .cmp-track{height:10px;border-radius:5px;background:var(--ink-2);border:1px solid var(--line);overflow:hidden}
+  .cmp-fill{height:100%;width:0;border-radius:4px;transition:width .45s cubic-bezier(.2,.8,.2,1);
+    background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  .cmp-fill.alt{background:linear-gradient(90deg,#222D34,#46586280)}
+  .cmp-fill.pro{background:linear-gradient(90deg,var(--cyan-dim),var(--cyan))}
+  .cmp-price{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:13px;text-align:right;
+    font-variant-numeric:tabular-nums;color:var(--mute)}
+  .cmp-row.me .cmp-price{color:var(--amber)}
+  .cmp-row.me.is-pro .cmp-price{color:var(--cyan)}
+  .cmp-delta{font-size:10px;text-align:right;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--mute-2)}
+  .cmp-delta.up{color:#FF7A8F}
+  .cmp-delta.down{color:var(--cyan)}
+  .cmp-delta.tu{color:var(--amber);font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+  .cmp-delta.tu.cy{color:var(--cyan)}
+  .verdict{font-size:11px;letter-spacing:.03em;color:var(--cyan);margin-top:2px}
+
+  .proj{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px}
+  .proj-big{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:42px;color:var(--amber);
+    font-variant-numeric:tabular-nums;line-height:1}
+  .proj-sub{font-size:11px;letter-spacing:.05em;color:var(--mute)}
+  .proj-sub b{color:var(--paper);font-weight:500}
+
+  @keyframes breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+  .screen.flash::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;border-radius:8px;
+    box-shadow:0 0 0 2px var(--cyan) inset;animation:flash .7s ease-out forwards}
+  @keyframes flash{0%{opacity:.9}100%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+  <div class="screen">
+
+      <!-- ===== TOPBAR ===== -->
+      <div class="topbar">
+        <div class="brand"><span class="mark">CLAUDE</span><span class="sub">telemetría</span></div>
+        <div class="topright">
+          <div class="chip"><span class="dot"></span>Opus 4.8 · activo</div>
+          <div class="live"><span class="ldot"></span>LIVE</div>
+          <div class="clock" id="clock">06:00 · <b id="resetTop">↺</b></div>
+        </div>
+      </div>
+
+      <!-- ===== CUERPO ===== -->
+      <div class="main">
+
+        <!-- A · gauge -->
+        <div class="colA">
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 168 168">
+              <circle cx="84" cy="84" r="72" fill="none" stroke="#13202A" stroke-width="13"/>
+              <circle cx="84" cy="84" r="72" fill="none" stroke="var(--cyan)" stroke-width="13"
+                      stroke-linecap="round" stroke-opacity=".55" stroke-dasharray="452.4" stroke-dashoffset="0"/>
+              <circle id="spent" cx="84" cy="84" r="72" fill="none" stroke="var(--amber)" stroke-width="13"
+                      stroke-linecap="round" stroke-dasharray="452.4" stroke-dashoffset="452.4"
+                      style="filter:drop-shadow(0 0 6px rgba(255,138,61,.55))"/>
+            </svg>
+            <div class="g-center">
+              <div class="g-num"><span id="gnum">0</span><span class="pct">%</span></div>
+              <div class="g-tag">sesión · usado</div>
+              <div class="g-left">queda <b id="gleft">100</b>%</div>
+            </div>
+          </div>
+          <div class="burn">quema <b id="burn">0</b> t/min</div>
+          <div class="reset">ventana 5 h · ↺ <b id="resetCd">—</b></div>
+        </div>
+
+        <!-- B · día + semana -->
+        <div class="colB">
+          <div class="daychart">
+            <div class="blk-head">
+              <span class="lab">consumo · hoy</span>
+              <span class="peak">pico <span id="peakTime">—</span> · <b id="peakVal">0/h</b></span>
+            </div>
+            <svg viewBox="0 0 568 44" preserveAspectRatio="none">
+              <defs><linearGradient id="dayfill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--amber)" stop-opacity=".28"/>
+                <stop offset="100%" stop-color="var(--amber)" stop-opacity="0"/>
+              </linearGradient></defs>
+              <path id="dayarea" fill="url(#dayfill)" d=""></path>
+              <path id="dayline" d=""></path>
+              <circle id="peakdot" r="3" cx="0" cy="0" opacity="0"></circle>
+            </svg>
+          </div>
+          <div class="weekcell">
+            <div class="meter">
+              <div class="meter-head">
+                <span class="lab">límite semanal</span>
+                <span class="val"><span id="weekVal">0</span><span class="est">% ≈</span></span>
+              </div>
+              <div class="track"><div class="fill" id="weekfill"></div></div>
+            </div>
+            <div class="mascot">
+              <canvas id="sprite" width="42" height="36"></canvas>
+              <span class="m-label" id="mLabel">en reposo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C · tokens + caché + modelos -->
+        <div class="colC">
+          <div class="tokens">
+            <div class="tk-head">tokens · hoy</div>
+            <div class="tk-grid">
+              <div class="tk"><span class="tk-lab"><i style="background:var(--amber)"></i>entrada</span>
+                <span class="tk-num" id="tkIn">0<span class="tk-unit">K</span></span></div>
+              <div class="tk"><span class="tk-lab"><i style="background:var(--cyan)"></i>salida</span>
+                <span class="tk-num" id="tkOut">0<span class="tk-unit">K</span></span></div>
+              <div class="tk"><span class="tk-lab"><i style="background:#46586280"></i>caché</span>
+                <span class="tk-num" id="tkCache">0<span class="tk-unit">K</span></span></div>
+            </div>
+            <div class="cache-eff">
+              <span class="ce-lab">caché útil</span>
+              <div class="ce-track"><div class="ce-fill" id="ceFill"></div></div>
+              <span class="ce-val" id="ceVal">0%</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="mix">
+            <div class="mix-head">mezcla de modelos</div>
+            <div class="mix-bar">
+              <div class="mix-seg" id="segOpus" style="background:#FF8A3D"></div>
+              <div class="mix-seg" id="segSonnet" style="background:#36D9C4"></div>
+              <div class="mix-seg" id="segHaiku" style="background:#9AA7AE"></div>
+            </div>
+            <div class="mix-legend">
+              <span><i style="background:#FF8A3D"></i>Opus <b id="mOpus">0%</b></span>
+              <span><i style="background:#36D9C4"></i>Sonnet <b id="mSonnet">0%</b></span>
+              <span><i style="background:#9AA7AE"></i>Haiku <b id="mHaiku">0%</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== FRANJA INFERIOR ===== -->
+      <div class="bottom">
+
+        <!-- Pro vs API -->
+        <div class="pnl bdr">
+          <div class="pnl-head"><span class="ph-lab">Pro vs API</span><span class="ph-tag">mes</span></div>
+          <div class="cmp">
+            <div class="cmp-row me is-pro">
+              <span class="cmp-name">Pro</span>
+              <div class="cmp-track"><div class="cmp-fill pro" id="barPro"></div></div>
+              <span class="cmp-price">$20</span>
+              <span class="cmp-delta tu cy">pagas</span>
+            </div>
+            <div class="cmp-row">
+              <span class="cmp-name">API-eq</span>
+              <div class="cmp-track"><div class="cmp-fill" id="barApi"></div></div>
+              <span class="cmp-price" id="prApi">$0</span>
+              <span class="cmp-delta" id="dApi">+0%</span>
+            </div>
+          </div>
+          <div class="verdict" id="verdict">—</div>
+        </div>
+
+        <!-- vs otras IA -->
+        <div class="pnl bdr">
+          <div class="pnl-head"><span class="ph-lab">vs otras IA</span>
+            <span class="ph-val">hoy <span id="costBig">$0.00</span></span></div>
+          <div class="cmp">
+            <div class="cmp-row me">
+              <span class="cmp-name">Claude</span>
+              <div class="cmp-track"><div class="cmp-fill" id="barClaude"></div></div>
+              <span class="cmp-price" id="prClaude">$0</span>
+              <span class="cmp-delta tu">tú</span>
+            </div>
+            <div class="cmp-row">
+              <span class="cmp-name">GPT</span>
+              <div class="cmp-track"><div class="cmp-fill alt" id="barGpt"></div></div>
+              <span class="cmp-price" id="prGpt">$0</span>
+              <span class="cmp-delta" id="dGpt">+0%</span>
+            </div>
+            <div class="cmp-row">
+              <span class="cmp-name">Gemini</span>
+              <div class="cmp-track"><div class="cmp-fill alt" id="barGem"></div></div>
+              <span class="cmp-price" id="prGem">$0</span>
+              <span class="cmp-delta" id="dGem">+0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proyección -->
+        <div class="pnl proj">
+          <div class="pnl-head"><span class="ph-lab">proyección</span></div>
+          <span class="proj-big" id="projBig">$0</span>
+          <span class="proj-sub">/mes a este ritmo · <b id="projDays">0</b> d sim</span>
+        </div>
+      </div>
+
+    </div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // ---- parámetros (presupuestos y comparativas · ajústalos a gusto) ----
+  const C = 452.4;              // circunferencia del gauge (2·π·r, r=72)
+  const SESSION_BUDGET = 8;     // $ por ventana de 5 h (gauge)
+  const WEEK_BUDGET = 250;      // $ límite semanal (medidor)
+  const GPT = 1.19, GEM = 0.63; // multiplicadores de coste relativo vs Claude
+  const PRO = 20;               // $ del plan Pro / mes
+  const BURN_WORK = 6000;       // t/min a partir de los que la mascota "procesa"
+  const POLL_MS = 3000;         // cada cuánto se piden datos reales a /data.json
+
+  // ---- estado de render ----
+  let buckets = new Array(24).fill(0), curHour = 0, prevWinIdx = null;
+
+  const fmt = n => n>=1e6 ? [(n/1e6).toFixed(2),'M']
+                 : n>=1e3 ? [Math.round(n/1e3).toString(),'K']
+                 : [Math.round(n).toString(),''];
+  const setTok = (el,n)=>{ const [v,u]=fmt(n); el.innerHTML=v+'<span class="tk-unit">'+u+'</span>'; };
+  const hhmm = m => { m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60)).padStart(2,'0'); };
+  const money = v => v<100 ? '$'+v.toFixed(1) : '$'+Math.round(v);
+
+  const smooth = pts => {
+    if(pts.length<2) return `M ${pts[0].x} ${pts[0].y} L ${(pts[0].x+0.1).toFixed(1)} ${pts[0].y}`;
+    let d=`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1],cx=((a.x+b.x)/2).toFixed(1);
+      d+=` C ${cx} ${a.y.toFixed(1)}, ${cx} ${b.y.toFixed(1)}, ${b.x.toFixed(1)} ${b.y.toFixed(1)}`; }
+    return d;
+  };
+  function drawDay(curHour){
+    const max=Math.max(...buckets,1), pts=[];
+    for(let h=0;h<=curHour;h++) pts.push({x:14+(h/23)*540, y:42-(buckets[h]/max)*38});
+    const d=smooth(pts);
+    $('dayline').setAttribute('d',d);
+    const last=pts[pts.length-1];
+    $('dayarea').setAttribute('d', pts.length>1 ? d+` L ${last.x.toFixed(1)} 44 L 14 44 Z` : '');
+    let pk=0; buckets.forEach((v,i)=>{ if(v>buckets[pk]) pk=i; });
+    if(buckets[pk]>0){
+      const dot=$('peakdot');
+      dot.setAttribute('cx',(14+(pk/23)*540).toFixed(1));
+      dot.setAttribute('cy',(42-(buckets[pk]/max)*38).toFixed(1));
+      dot.style.opacity=1;
+      $('peakTime').textContent=String(pk).padStart(2,'0')+':00';
+      const [pv,pu]=fmt(buckets[pk]); $('peakVal').textContent=pv+pu+'/h';
+    }
+  }
+
+  // ---- mascota pixel reactiva (diseño original) ----
+  const cvs=$('sprite'), g2=cvs.getContext('2d'), PX=3, EYE='#2A1208';
+  const BASE=[
+    "     dddd     ","   ddBBBBdd   ","  dBBBBBBBBd  "," dBBBBBBBBBBd ",
+    " dBBBBBBBBBBd "," dBBBBBBBBBBd "," dBBBBBBBBBBd "," dBBBBBBBBBBd ",
+    " dBBBBBBBBBBd ","  dBBBBBBBBd  ","   dBBBBBBd   ","    dddddd    "
+  ];
+  const SKIN={
+    calm:     {body:'#FF8A3D', line:'#8A4012', label:'en reposo',    lc:'var(--mute)'},
+    work:     {body:'#FFA85C', line:'#9A4A18', label:'procesando',   lc:'#FF8A3D'},
+    alarm:    {body:'#FF3D6E', line:'#8A1230', label:'¡al límite!',  lc:'#FF3D6E'},
+    celebrate:{body:'#FFB14D', line:'#9A5A18', label:'ventana nueva',lc:'#FFD23D'}
+  };
+  const px=(x,y,c)=>{ g2.fillStyle=c; g2.fillRect(x*PX,y*PX,PX,PX); };
+  function drawSprite(state,f){
+    const s=SKIN[state]; g2.clearRect(0,0,cvs.width,cvs.height);
+    const ox=(state==='alarm')?(f%2?1:-1):0;
+    const oy=(state==='work')?(f%2?1:0):(state==='celebrate')?(f%2?-1:0):0;
+    for(let y=0;y<BASE.length;y++) for(let x=0;x<BASE[y].length;x++){
+      const ch=BASE[y][x];
+      if(ch==='B') px(x+ox,y+oy,s.body); else if(ch==='d') px(x+ox,y+oy,s.line);
+    }
+    if(state==='calm' && f%8===0){ px(4+ox,4+oy,s.line);px(5+ox,4+oy,s.line);px(8+ox,4+oy,s.line);px(9+ox,4+oy,s.line); }
+    else if(state==='alarm'){ [[4,4],[5,4],[4,5],[5,5],[8,4],[9,4],[8,5],[9,5]].forEach(p=>px(p[0]+ox,p[1]+oy,EYE)); }
+    else if(state==='celebrate'){ px(4+ox,5+oy,EYE);px(5+ox,4+oy,EYE);px(8+ox,4+oy,EYE);px(9+ox,5+oy,EYE); }
+    else { px(4+ox,4+oy,EYE); px(9+ox,4+oy,EYE); }
+    if(state==='alarm'){ px(6+ox,7+oy,EYE);px(7+ox,7+oy,EYE);px(6+ox,8+oy,EYE);px(7+ox,8+oy,EYE); }
+    else if(state==='celebrate'){ px(5+ox,7+oy,EYE);px(8+ox,7+oy,EYE);px(6+ox,8+oy,EYE);px(7+ox,8+oy,EYE); }
+    else { px(6+ox,7+oy,EYE);px(7+ox,7+oy,EYE); }
+    if(state==='work' && f%2){ px(12,2,'#36D9C4'); px(12,3,'#8FE9DD'); }
+    if(state==='alarm'){ const m=f%2?'#FFD23D':'#FF3D6E'; [[1,1],[1,2],[1,4],[12,1],[12,2],[12,4]].forEach(p=>px(p[0],p[1],m)); }
+    if(state==='celebrate'){ const sp=f%2?'#36D9C4':'#FFD23D'; [[1,1],[12,1],[0,5],[13,5]].forEach(p=>px(p[0],p[1],sp)); }
+  }
+  let mascot='calm', celebrateUntil=0, af=0;
+  const setMascot=st=>{ mascot=st; };
+  function animLoop(){ af++; const st=(Date.now()<celebrateUntil)?'celebrate':mascot;
+    drawSprite(st,af); $('mLabel').textContent=SKIN[st].label; $('mLabel').style.color=SKIN[st].lc; }
+
+  function render(d){
+    buckets = d.hourly; curHour = d.cur_hour;
+
+    // gauge · ventana de 5 h
+    const pct=Math.min(d.window_cost/SESSION_BUDGET*100,100), hot=pct>=88;
+    $('spent').style.strokeDashoffset=C-C*pct/100;
+    $('spent').style.stroke=hot?'var(--hot)':'var(--amber)';
+    $('gnum').textContent=Math.round(pct);
+    $('gleft').textContent=Math.round(100-pct);
+    document.querySelector('.g-num .pct').style.color=hot?'var(--hot)':'var(--amber)';
+    setMascot(hot ? 'alarm' : (d.burn>BURN_WORK ? 'work' : 'calm'));
+
+    const [bv,bu]=fmt(d.burn); $('burn').textContent=bv+bu;
+    const r=d.reset_min, cd=(r>=60?Math.floor(r/60)+'h ':'')+(r%60)+'m';
+    $('resetCd').textContent=cd; $('resetTop').textContent='↺ '+cd;
+    $('clock').firstChild.textContent=d.clock+' · ';
+
+    // chip de modelo · estado
+    const chip=document.querySelector('.chip');
+    if(chip && chip.lastChild) chip.lastChild.textContent=d.model+' · '+(d.active?'activo':'inactivo');
+
+    setTok($('tkIn'),d.in); setTok($('tkOut'),d.out); setTok($('tkCache'),d.cache);
+
+    const ceDen=d.cache_read+d.in, ce=ceDen>0?d.cache_read/ceDen*100:0;
+    $('ceFill').style.width=ce+'%'; $('ceVal').textContent=Math.round(ce)+'%';
+
+    const po=d.mix.opus*100, ps=d.mix.sonnet*100, ph=d.mix.haiku*100;
+    $('segOpus').style.width=po+'%'; $('segSonnet').style.width=ps+'%'; $('segHaiku').style.width=ph+'%';
+    $('mOpus').textContent=Math.round(po)+'%'; $('mSonnet').textContent=Math.round(ps)+'%'; $('mHaiku').textContent=Math.round(ph)+'%';
+
+    const wk=Math.min(d.week_cost/WEEK_BUDGET*100,100);
+    $('weekfill').style.width=wk+'%'; $('weekVal').textContent=Math.round(wk);
+
+    // vs otras IA
+    const c=d.cost_day, g=c*GPT, ge=c*GEM, mx=Math.max(c,g,ge,0.01);
+    $('costBig').textContent='$'+c.toFixed(2);
+    $('barClaude').style.width=(c/mx*100)+'%'; $('prClaude').textContent=money(c);
+    $('barGpt').style.width=(g/mx*100)+'%';    $('prGpt').textContent=money(g);
+    $('barGem').style.width=(ge/mx*100)+'%';   $('prGem').textContent=money(ge);
+    const setDelta=(id,o)=>{ const el=$(id), dd=c>0?Math.round((o-c)/c*100):0;
+      el.textContent=(dd>0?'+':'')+dd+'%'; el.className='cmp-delta '+(dd>0?'up':'down'); };
+    setDelta('dGpt',g); setDelta('dGem',ge);
+
+    // Pro vs API-eq (mes)
+    const mApi=d.month_cost, mMax=Math.max(PRO,mApi,0.01);
+    $('barPro').style.width=(PRO/mMax*100)+'%';
+    $('barApi').style.width=(mApi/mMax*100)+'%';
+    $('prApi').textContent=money(mApi);
+    const dv=Math.round((mApi-PRO)/PRO*100);
+    $('dApi').textContent=(dv>0?'+':'')+dv+'%'; $('dApi').className='cmp-delta '+(dv>0?'up':'down');
+    $('verdict').textContent = mApi>=PRO ? 'Pro te ahorra '+money(mApi-PRO)+' este mes'
+                                         : 'llevas '+money(mApi)+' de $20';
+
+    // proyección mensual
+    const perDay=d.days_elapsed>0?d.month_cost/d.days_elapsed:0;
+    $('projBig').textContent=money(perDay*30);
+    $('projDays').textContent=d.days_elapsed.toFixed(1);
+
+    drawDay(curHour);
+
+    // ventana nueva → celebración + flash
+    if(prevWinIdx!==null && d.window_idx!==prevWinIdx){
+      celebrateUntil=Date.now()+1800;
+      if(!reduce){ const s=document.querySelector('.screen'); s.classList.add('flash'); setTimeout(()=>s.classList.remove('flash'),700); }
+    }
+    prevWinIdx=d.window_idx;
+  }
+
+  async function poll(){
+    try{
+      const res=await fetch('data.json',{cache:'no-store'});
+      if(res.ok) render(await res.json());
+    }catch(e){ /* servidor aún no listo / sin datos: reintenta */ }
+    setTimeout(poll, POLL_MS);
+  }
+
+  window.addEventListener('load', ()=>{ animLoop(); if(!reduce) setInterval(animLoop,150); poll(); });
+})();
+</script>
+</body>
+</html>

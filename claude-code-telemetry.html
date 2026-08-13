@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code · Telemetry Uplink</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root{
+  --bg:#04060c; --bg2:#070a13;
+  --panel:rgba(13,19,33,.55); --edge:rgba(45,226,230,.16);
+  --grid:rgba(60,130,170,.08);
+  --mag:#ff2e92; --mag2:#d2006e;
+  --cyan:#2de2e6; --cyan2:#6ff8fb;
+  --amber:#ffb24a;
+  --ink:#d3e8ff; --dim:#6f8aad; --faint:#3c4f6b;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+body{
+  background:
+    radial-gradient(120% 90% at 50% 0%, #0a1020 0%, var(--bg) 55%, #020306 100%);
+  min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:18px; padding:0;
+  font-family:var(--disp); color:var(--ink); overflow:hidden;
+}
+/* faint blueprint grid + vignette over the whole stage */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask:radial-gradient(120% 100% at 50% 40%,#000 30%,transparent 85%);
+}
+
+.fit{position:relative;z-index:1}
+
+/* ---- device shell (sin bisel: el panel físico ES el marco) ---- */
+.device{
+  border-radius:0; padding:0;
+  background:none; box-shadow:none;
+}
+.device-label{ display:none; }   /* etiqueta de mockup: no se ve en el panel real */
+
+/* ---- HUD ---- */
+.hud{
+  position:relative; width:819px; height:480px; overflow:hidden;  /* el JS ajusta el ancho y aplica zoom a la resolución real */
+  border-radius:0; padding:14px;
+  background:
+    radial-gradient(140% 120% at 100% 0%, rgba(255,46,146,.10), transparent 45%),
+    radial-gradient(120% 120% at 0% 100%, rgba(45,226,230,.10), transparent 45%),
+    linear-gradient(180deg,var(--bg2),#03040a);
+  box-shadow:inset 0 0 0 1px rgba(45,226,230,.14), inset 0 0 60px rgba(0,0,0,.6);
+  display:flex; flex-direction:column; gap:12px;
+}
+/* scanlines + sweep beam + corner crop */
+.hud::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:5;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay; opacity:.5;
+}
+.beam{position:absolute;left:0;right:0;height:120px;top:-120px;z-index:4;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(94,247,251,.06) 60%,transparent);
+  animation:sweep 7s linear infinite}
+@keyframes sweep{to{top:480px}}
+
+.cnr{position:absolute;width:14px;height:14px;border:1.5px solid var(--cyan);opacity:.5;z-index:6}
+.cnr.tl{top:7px;left:7px;border-right:0;border-bottom:0}
+.cnr.tr{top:7px;right:7px;border-left:0;border-bottom:0}
+.cnr.bl{bottom:7px;left:7px;border-right:0;border-top:0}
+.cnr.br{bottom:7px;right:7px;border-left:0;border-top:0}
+
+/* ---- header ---- */
+.head{display:flex;align-items:center;justify-content:space-between;height:42px;flex:0 0 auto;
+  padding-bottom:10px;border-bottom:1px solid rgba(45,226,230,.14)}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{width:32px;height:32px;flex:0 0 auto;filter:drop-shadow(0 0 6px rgba(217,119,87,.7))}
+/* ---- mascota Claude: animación CSS (respiración + parpadeo + marcha) ---- */
+.logo .m-body{transform-box:fill-box;transform-origin:50% 100%;animation:m-breath 3.2s ease-in-out infinite}
+.logo .m-eyes{transform-box:fill-box;transform-origin:50% 50%;animation:m-blink 4.4s ease-in-out infinite}
+.logo .leg{transform-box:fill-box;transform-origin:50% 100%;animation:m-walk .9s ease-in-out infinite}
+.logo #leg2{animation-delay:-.225s}
+.logo #leg3{animation-delay:-.45s}
+.logo #leg4{animation-delay:-.675s}
+@keyframes m-breath{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-1.5px) scaleY(1.04)}}
+@keyframes m-blink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+@keyframes m-walk{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.brand h1{font-size:16px;font-weight:700;letter-spacing:.12em;line-height:1}
+.brand .sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;color:var(--cyan);
+  text-transform:uppercase;margin-top:3px;animation:flick 5s steps(1) infinite}
+@keyframes flick{0%,97%,100%{opacity:1}98%{opacity:.4}99%{opacity:.85}}
+.head-r{display:flex;align-items:center;gap:16px;font-family:var(--mono)}
+.clock{text-align:right}
+.clock .t{font-size:18px;font-weight:700;letter-spacing:.05em;color:var(--ink);
+  text-shadow:0 0 12px rgba(94,247,251,.4)}
+.clock .d{font-size:9px;letter-spacing:.28em;color:var(--dim);text-transform:uppercase}
+.pill{display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:4px;
+  border:1px solid rgba(45,226,230,.22);background:rgba(45,226,230,.05)}
+.pill .lab{font-size:8px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.pill .val{font-size:13px;font-weight:700;color:var(--cyan2);letter-spacing:.04em}
+.live{width:8px;height:8px;border-radius:50%;background:var(--mag);
+  box-shadow:0 0 10px var(--mag);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+
+/* ---- body grid ---- */
+.body{flex:1 1 auto;display:grid;grid-template-columns:262px 1fr 214px;gap:12px;min-height:0}
+.card{position:relative;border:1px solid var(--edge);border-radius:8px;
+  background:var(--panel);padding:12px 13px;display:flex;flex-direction:column}
+.card>.k{font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:var(--dim);
+  text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.k::before{content:"";width:5px;height:5px;background:var(--cyan);transform:rotate(45deg);
+  box-shadow:0 0 7px var(--cyan)}
+.tag{font-family:var(--mono);font-size:8px;letter-spacing:.14em;padding:1px 5px;border-radius:3px;
+  border:1px solid currentColor;line-height:1.4}
+
+/* gauge */
+.gauge{align-items:center;justify-content:flex-start}
+.gauge .ring{position:relative;width:230px;height:148px;margin-top:6px}
+.gwrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-end;padding-bottom:6px}
+.gwrap .big{font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:.01em;
+  color:#fff;text-shadow:0 0 18px rgba(255,46,146,.6);line-height:1}
+.gwrap .unit{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--mag);
+  text-transform:uppercase;margin-top:5px}
+.gauge .meta{display:flex;width:100%;justify-content:space-between;margin-top:10px;
+  font-family:var(--mono);font-size:10px;color:var(--dim)}
+.gauge .meta b{color:var(--ink);font-weight:500}
+.gauge .equiv{margin-top:9px;font-family:var(--mono);font-size:13px;color:var(--cyan2);
+  letter-spacing:.04em;text-shadow:0 0 12px rgba(45,226,230,.35)}
+.gauge .equiv span{color:var(--dim);font-size:9px;letter-spacing:.18em}
+
+/* middle column */
+.mid{display:flex;flex-direction:column;gap:12px;min-height:0}
+.today{flex:0 0 auto}
+.today .row{display:flex;align-items:baseline;justify-content:space-between;margin-top:8px}
+.today .big{font-family:var(--mono);font-size:30px;font-weight:700;color:#fff;
+  letter-spacing:.01em;text-shadow:0 0 16px rgba(94,247,251,.4)}
+.today .big .u{font-size:12px;color:var(--cyan);letter-spacing:.16em;margin-left:5px}
+.today .delta{font-family:var(--mono);font-size:11px;color:var(--amber)}
+.spark{width:100%;height:42px;margin-top:8px}
+.models{flex:1 1 auto;justify-content:space-between}
+.mbar{margin-top:11px}
+.mbar .lr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;
+  margin-bottom:4px}
+.mbar .lr .nm{color:var(--ink);letter-spacing:.08em}
+.mbar .lr .vl{color:var(--dim)}
+.track{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.fillb{height:100%;border-radius:3px;width:0;transition:width 1.3s cubic-bezier(.2,.8,.2,1)}
+
+/* nodes / uplink */
+.nodes{padding-bottom:10px}
+.node{display:flex;flex-direction:column;gap:5px;margin-top:11px;position:relative;z-index:2}
+.node .top{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono)}
+.node .id{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.12em;color:var(--ink)}
+.node .os{width:7px;height:7px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.node .tok{font-size:12px;font-weight:700;color:#fff}
+.node .lr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;
+  color:var(--faint);letter-spacing:.1em}
+.core{margin-top:auto;display:flex;align-items:center;gap:9px;padding-top:11px;
+  border-top:1px dashed rgba(45,226,230,.2);font-family:var(--mono)}
+.core .dot{width:11px;height:11px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 14px var(--cyan);animation:pulse 2.2s ease-in-out infinite}
+.core .nm{font-size:11px;letter-spacing:.1em;color:var(--cyan2)}
+.core .st{margin-left:auto;font-size:8.5px;letter-spacing:.18em;color:var(--dim)}
+.uplink{position:absolute;inset:0;z-index:1;pointer-events:none}
+.uplink path{fill:none;stroke:rgba(45,226,230,.45);stroke-width:1;
+  stroke-dasharray:3 5;animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-16}}
+
+/* footer projects */
+.proj{flex:0 0 auto;border:1px solid var(--edge);border-radius:8px;background:var(--panel);
+  padding:10px 13px}
+.proj .k{font-family:var(--mono);font-size:9px;letter-spacing:.28em;color:var(--dim);
+  text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.proj .k::before{content:"";width:5px;height:5px;background:var(--mag);transform:rotate(45deg);
+  box-shadow:0 0 7px var(--mag)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 26px}
+.prow{display:flex;align-items:center;gap:10px;font-family:var(--mono)}
+.prow .nm{font-size:10px;color:var(--ink);width:128px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;letter-spacing:.04em}
+.prow .tk{height:5px;border-radius:3px;background:rgba(255,255,255,.06);flex:1;overflow:hidden}
+.prow .tk i{display:block;height:100%;border-radius:3px;width:0;
+  background:linear-gradient(90deg,var(--mag2),var(--mag));transition:width 1.4s ease}
+.prow .vl{font-size:10px;color:var(--dim);width:48px;text-align:right}
+
+.mock{position:absolute;top:9px;right:30px;z-index:6;font-family:var(--mono);font-size:7.5px;
+  letter-spacing:.2em;color:var(--amber);opacity:.7}
+
+@media (prefers-reduced-motion:reduce){
+  .beam,.live,.core .dot,.uplink path,.brand .sub,
+  .logo .m-body,.logo .m-eyes,.logo .leg{animation:none}
+}
+</style>
+</head>
+<body>
+<h1 class="sr">Claude Code telemetry dashboard — preliminary sci-fi concept</h1>
+
+<div class="fit" id="fit">
+  <div class="device">
+    <div class="hud" role="img" aria-label="Tablero de telemetría de Claude Code con datos de ejemplo">
+      <span class="cnr tl"></span><span class="cnr tr"></span>
+      <span class="cnr bl"></span><span class="cnr br"></span>
+      <div class="beam"></div>
+      <!-- <div class="mock" id="mock">// LIVE · CLAUDE CODE</div> -->
+
+      <!-- HEADER -->
+      <header class="head">
+        <div class="brand">
+          <!-- Mascota "Walking Claude": rects reales del SVG original (patas con
+               clip de suelo). Sin los transforms de GSAP; animada con CSS. -->
+          <svg class="logo" viewBox="0 0 107 86" fill="none" aria-hidden="true">
+            <defs><clipPath id="ground-clip"><rect x="-20" y="-50" width="160" height="136"/></clipPath></defs>
+            <g clip-path="url(#ground-clip)" fill="#DD775B">
+              <rect class="leg leg-b" x="85" y="60" width="11" height="26"/>
+              <rect class="leg leg-a" x="64" y="60" width="11" height="26"/>
+              <rect class="leg leg-b" x="32" y="60" width="11" height="26"/>
+              <rect class="leg leg-a" x="11" y="60" width="11" height="26"/>
+            </g>
+            <g class="m-body" fill="#DD775B">
+              <rect x="11" y="0" width="85" height="65"/>
+              <rect x="85" y="21" width="22" height="23"/>
+              <rect x="0" y="21" width="22" height="23"/>
+              <g class="m-eyes" fill="#000">
+                <rect x="75" y="11" width="11" height="11"/>
+                <rect x="21" y="11" width="11" height="11"/>
+              </g>
+            </g>
+          </svg>
+          <div>
+            <h1>CLAUDE<span style="color:var(--mag)">//</span>CODE</h1>
+            <div class="sub">telemetry uplink</div>
+          </div>
+        </div>
+        <div class="head-r">
+          <div class="pill"><span><span class="lab">5h reset</span></span><span class="val" id="reset">02:14:08</span></div>
+          <div class="pill"><span class="live"></span><div><div class="lab">uplink</div><div class="val" id="uplink" style="font-size:11px">—</div></div></div>
+          <div class="clock">
+            <div class="t" id="clk">21:46:03</div>
+            <!-- <div class="d" id="date">GYE · UTC−5</div> -->
+          </div>
+        </div>
+      </header>
+
+      <!-- BODY -->
+      <div class="body">
+
+        <!-- 5H GAUGE -->
+        <section class="card gauge">
+          <div class="k">current 5h block <span class="tag" id="winState" style="color:var(--cyan);margin-left:auto">LIVE</span></div>
+          <div class="ring">
+            <svg viewBox="0 0 230 148" width="230" height="148">
+              <defs>
+                <linearGradient id="gg" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#2de2e6"/><stop offset="1" stop-color="#ff2e92"/>
+                </linearGradient>
+              </defs>
+              <path d="M20 138 A95 95 0 0 1 210 138" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="12" stroke-linecap="round"/>
+              <path id="arc" d="M20 138 A95 95 0 0 1 210 138" fill="none" stroke="url(#gg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="298" stroke-dashoffset="298" style="filter:drop-shadow(0 0 6px rgba(255,46,146,.6));transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1)"/>
+            </svg>
+            <div class="gwrap">
+              <div class="big" id="blk">0</div>
+              <div class="unit">tokens / 5h</div>
+            </div>
+          </div>
+          <div class="meta"><span id="gStart">--:--</span><span><b id="gElapsed">0%</b> of 5h elapsed</span><span>↺ <span id="gReset">—</span></span></div>
+          <div class="equiv">≈ $<span id="gEquiv">0.00</span> <span>API-RATE EQUIV</span></div>
+        </section>
+
+        <!-- MIDDLE -->
+        <div class="mid">
+          <section class="card today">
+            <div class="k">today · all machines</div>
+            <div class="row">
+              <div class="big" id="day">0<span class="u">TOK</span></div>
+              <div class="delta" id="dayDelta">—</div>
+            </div>
+            <svg class="spark" viewBox="0 0 320 42" preserveAspectRatio="none">
+              <defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="rgba(45,226,230,.35)"/><stop offset="1" stop-color="rgba(45,226,230,0)"/>
+              </linearGradient></defs>
+              <polygon id="sparArea" fill="url(#sf)" points=""/>
+              <polyline id="sparLine" fill="none" stroke="#5ff8fb" stroke-width="1.6" stroke-linejoin="round" points="" style="filter:drop-shadow(0 0 4px rgba(94,248,251,.5))"/>
+            </svg>
+          </section>
+
+          <section class="card models">
+            <div class="k">model mix</div>
+            <div class="mbar">
+              <div class="lr"><span class="nm">SONNET 4.6</span><span class="vl" id="mvSonnet">—</span></div>
+              <div class="track"><div class="fillb" id="mfSonnet" style="background:linear-gradient(90deg,#1d9a9e,#2de2e6)"></div></div>
+            </div>
+            <div class="mbar">
+              <div class="lr"><span class="nm">OPUS 4.8</span><span class="vl" id="mvOpus">—</span></div>
+              <div class="track"><div class="fillb" id="mfOpus" style="background:linear-gradient(90deg,#d2006e,#ff2e92)"></div></div>
+            </div>
+            <div class="mbar">
+              <div class="lr"><span class="nm">HAIKU 4.5</span><span class="vl" id="mvHaiku">—</span></div>
+              <div class="track"><div class="fillb" id="mfHaiku" style="background:linear-gradient(90deg,#8a6d2f,#ffb24a)"></div></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- NODES / UPLINK -->
+        <section class="card nodes">
+          <div class="k">nodes</div>
+          <svg class="uplink" viewBox="0 0 214 290" preserveAspectRatio="none">
+            <path d="M30 70 C30 160 107 180 107 250"/>
+            <path d="M184 130 C184 200 107 200 107 250"/>
+          </svg>
+          <div class="node" id="node0">
+            <div class="top"><span class="id"><span class="os" id="n0dot" style="color:#2de2e6"></span><span id="n0name">—</span></span><span class="tok" id="n0tok">—</span></div>
+            <div class="track"><div class="fillb" id="n0fill" style="background:linear-gradient(90deg,#1d9a9e,#2de2e6)"></div></div>
+            <div class="lr"><span id="n0os">—</span><span id="n0age">—</span></div>
+          </div>
+          <div class="node" id="node1">
+            <div class="top"><span class="id"><span class="os" id="n1dot" style="color:#3c4f6b"></span><span id="n1name">—</span></span><span class="tok" id="n1tok"></span></div>
+            <div class="track"><div class="fillb" id="n1fill" style="background:linear-gradient(90deg,#26303f,#3c4f6b)"></div></div>
+            <div class="lr"><span id="n1os">—</span><span id="n1age"></span></div>
+          </div>
+          <div class="core">
+            <span class="dot" id="coreDot"></span>
+            <span class="nm" id="coreNm">—</span>
+            <span class="st" id="coreSt">—</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- FOOTER PROJECTS -->
+      <footer class="proj">
+        <div class="k">top projects · 7d</div>
+        <div class="pgrid" id="pgrid"></div>
+      </footer>
+
+    </div>
+  </div>
+  <div class="device-label">Anthropic · Claude Code Telemetry — 5&Prime; panel // 800×480 // live</div>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var POLL_MS=3000, C=298;   // C = longitud del trazo del arco (stroke-dasharray)
+
+  // HUD nativo a la resolución del panel. Se dibuja a la altura de diseño (480)
+  // y se ajusta con `zoom` hasta la resolución real (zoom afecta al layout de
+  // verdad: no es transform → sin recorte, sin franjas y texto nítido). El ancho
+  // fluye para llenar exacto; la columna central 1fr absorbe la diferencia.
+  var hud=document.querySelector('.hud');
+  var DESIGN_H=480;
+  function resize(){
+    var z=window.innerHeight/DESIGN_H;                // 1.25 en 1024×600
+    hud.style.zoom=z;
+    hud.style.width=(window.innerWidth/z)+'px';       // ancho de diseño que llena el panel
+    hud.style.height=DESIGN_H+'px';
+  }
+  window.addEventListener('resize',resize);
+
+  // ---- helpers ----
+  function pad(n){return String(n).padStart(2,'0');}
+  function fmt(n){n=n||0;return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(Math.round(n));}
+  function hm(min){min=Math.max(0,min|0);var h=(min/60)|0,m=min%60;return (h>0?h+'h ':'')+m+'m';}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  // ---- reloj real (hora local del navegador) ----
+  function clockTick(){
+    var d=new Date();
+    $('clk').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  }
+  clockTick(); setInterval(clockTick,1000);
+
+  // ---- cuenta atrás de reset: sembrada por reset_min, corre localmente entre polls ----
+  var resetSec=null;
+  setInterval(function(){
+    if(resetSec===null){return;}
+    if(resetSec>0)resetSec--;
+    $('reset').textContent=pad(resetSec/3600|0)+':'+pad(resetSec/60%60|0)+':'+pad(resetSec%60);
+    $('gReset').textContent=hm(resetSec/60|0);
+  },1000);
+
+  // ---- sparkline del día desde los buckets horarios (0..320 ancho, 6..34 alto) ----
+  function drawSpark(hourly,curHour){
+    hourly=hourly||[]; var n=Math.max((curHour|0)+1,1), max=1, h;
+    for(h=0;h<n;h++)max=Math.max(max,hourly[h]||0);
+    var pts=[];
+    for(h=0;h<n;h++){
+      var x=n>1?(h/(n-1))*320:0, y=34-((hourly[h]||0)/max)*28;
+      pts.push(Math.round(x)+','+y.toFixed(1));
+    }
+    $('sparLine').setAttribute('points',pts.join(' '));
+    $('sparArea').setAttribute('points', n>1?(pts.join(' ')+' 320,42 0,42'):'');
+  }
+
+  function setMix(fam,frac,total){
+    frac=frac||0;
+    $('mf'+fam).style.width=(frac*100)+'%';
+    $('mv'+fam).textContent=fmt(frac*total)+' · '+Math.round(frac*100)+'%';
+  }
+
+  function render(d){
+    // ---- gauge ventana 5h (honesto: el arco es TIEMPO transcurrido, el número son tokens reales) ----
+    var active=d.window_active, elapsed=Math.min(d.window_elapsed||0,1);
+    $('arc').style.strokeDashoffset=C-C*(active?elapsed:0);
+    $('blk').childNodes[0].nodeValue=fmt(active?d.window_tokens:0);
+    $('gElapsed').textContent=Math.round(elapsed*100)+'%';
+    $('gStart').textContent=(active&&d.window_start)?d.window_start:'--:--';
+    $('gEquiv').textContent=(active?d.window_cost:0).toFixed(2);
+    $('winState').textContent=active?'LIVE':'IDLE';
+    $('winState').style.color=active?'var(--cyan)':'var(--faint)';
+    resetSec=active?Math.max(0,(d.reset_min|0))*60:null;
+    if(!active){$('reset').textContent='--:--:--';$('gReset').textContent='—';}
+
+    // ---- hoy (todas las máquinas de este nodo) ----
+    $('day').childNodes[0].nodeValue=fmt(d.today_total);
+    var v=d.vs_7d_avg_pct;
+    $('dayDelta').textContent=(v===null||v===undefined)?'sin base 7d'
+      :(v>=0?'▲ ':'▼ ')+Math.abs(v)+'% vs 7d avg';
+    drawSpark(d.hourly,d.cur_hour);
+
+    // ---- mezcla de modelos (tokens = fracción × total de hoy) ----
+    var mix=d.mix||{};
+    setMix('Sonnet',mix.sonnet,d.today_total);
+    setMix('Opus',mix.opus,d.today_total);
+    setMix('Haiku',mix.haiku,d.today_total);
+
+    // ---- nodos: un nodo real + segundo slot honesto (sin merge multi-máquina aún) ----
+    var n0=(d.nodes||[])[0];
+    if(n0){
+      $('n0name').textContent=n0.name;
+      $('n0tok').textContent=fmt(n0.tokens);
+      $('n0os').textContent=n0.os+(n0.active?' · activo':'');
+      $('n0age').textContent=(n0.last_min===null||n0.last_min===undefined)?'· —':'· hace '+n0.last_min+'m';
+      $('n0fill').style.width='100%';
+      $('n0dot').style.color=n0.active?'#2de2e6':'#ffb24a';
+    }
+    $('n1name').textContent='—— NO LINK';
+    $('n1os').textContent='sin segundo nodo';
+    $('n1fill').style.width='0%';
+    $('node1').style.opacity='.4';
+    $('coreNm').textContent='LOCAL';
+    $('coreSt').textContent='NODO ÚNICO · SIN VPS';
+    $('coreDot').style.background=n0&&n0.active?'var(--cyan)':'var(--faint)';
+    $('uplink').textContent=(n0&&n0.active)?'ACTIVE':'IDLE';
+
+    // ---- proyectos (top 4, 7 días) ----
+    var pg=$('pgrid'); pg.innerHTML='';
+    var projs=d.by_project||[];
+    var max=projs.reduce(function(a,p){return Math.max(a,p.tokens);},1);
+    projs.slice(0,4).forEach(function(p,i){
+      var row=document.createElement('div'); row.className='prow';
+      row.innerHTML='<span class="nm">'+esc(p.name)+'</span>'+
+        '<span class="tk"><i style="transition-delay:'+(0.1*(i+1)).toFixed(1)+'s"></i></span>'+
+        '<span class="vl">'+fmt(p.tokens)+'</span>';
+      pg.appendChild(row);
+      var bar=row.querySelector('i');
+      requestAnimationFrame(function(){bar.style.width=Math.round(p.tokens/max*100)+'%';});
+    });
+
+    requestAnimationFrame(resize);
+  }
+
+  async function poll(){
+    try{
+      var res=await fetch('/data.json',{cache:'no-store'});
+      if(res.ok)render(await res.json());
+    }catch(e){/* servidor reiniciando o sin datos: reintentar */}
+    setTimeout(poll,POLL_MS);
+  }
+
+  // ---- auto-reload de desarrollo: recarga cuando el HTML cambia en disco ----
+  (function(){
+    var stamp=null;
+    setInterval(async function(){
+      try{
+        var r=await fetch('/version?f=telemetry',{cache:'no-store'});
+        var j=await r.json();
+        if(stamp===null){stamp=j.mtime;return;}
+        if(j.mtime!==stamp)location.reload();
+      }catch(e){}
+    },1500);
+  })();
+
+  window.addEventListener('load',function(){ resize(); poll(); });
+})();
+</script>
+</body>
+</html>
