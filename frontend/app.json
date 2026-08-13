@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Presupuesto",
+    "slug": "presupuesto-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.guarrodstudio.presupuesto"
+    },
+    "android": {
+      "package": "com.guarrodstudio.presupuesto"
+    },
+    "scheme": "presupuesto",
+    "extra": {
+      "apiUrl": "http://localhost:8000"
+    }
+  }
+}
