@@ -14,3 +14,8 @@ venv/
 # Logs and runtime artifacts
 *.log
 /tmp/
+history.db
+config.json
+hub-data/
+launch.log
+config.mac.json

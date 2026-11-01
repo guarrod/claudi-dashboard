@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Mac: copiar a ~/Library/LaunchAgents/ y ejecutar
+     launchctl load ~/Library/LaunchAgents/com.claude-dashboard.push.plist
+     Cambia la ruta de ProgramArguments por la del repo en el Mac. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.claude-dashboard.push</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/CAMBIA/claude-dashboard/push.py</string>
+    <string>--loop</string><string>120</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/CAMBIA/claude-dashboard</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/claude-dashboard-push.log</string>
+  <key>StandardErrorPath</key><string>/tmp/claude-dashboard-push.log</string>
+</dict>
+</plist>

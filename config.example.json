@@ -1,0 +1,5 @@
+{
+  "url": "https://guarrod.com/claude-hub",
+  "token": "el-mismo-valor-que-CLAUDE_HUB_TOKEN-en-el-VPS",
+  "machine": "WIN-01"
+}

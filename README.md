@@ -1,181 +1,91 @@
-# Claude Code Telemetry — project brief
+# Claude Code Telemetry
 
-Cross-machine usage tracker for Claude Code, rendered on a 5" wall panel.
-Reads local Claude Code logs from two machines (Mac + Windows), merges them on
-a VPS, and serves a sci-fi HUD dashboard.
+Panel de pared (Hosyond 5", 1024×600) que muestra cuánto Claude Code usas en
+esta máquina: ventana de 5 h, hoy, mezcla de modelos, proyectos y los últimos
+7 días. Todo sale de los logs locales de Claude Code; no hay API oficial de
+consumo de suscripción.
 
-> This file is the source of truth. The mockup in `mockup/` shows the target look.
-> Read both before writing code.
+![preview](preview.png)
 
----
-
-## Goal
-
-One always-on 5" panel (800×480 landscape) that answers, at a glance:
-how much Claude Code did I burn today, across both my machines, on which models
-and which projects, and how is the current 5-hour block going.
-
-## Scope and hard limits (read this before designing anything)
-
-- **This is a Claude Code tracker, not a "subscription" tracker.** Chat (iOS/Mac/web)
-  and Claude Design run server-side and leave **no local logs**. They will never
-  appear here. Do not add placeholders for them.
-- **There is no official Anthropic API for subscription usage.** The only data
-  source is the local JSONL logs Claude Code writes to `~/.claude/projects/`
-  (and the Xcode integration dir on Mac).
-- **Flat-rate plan = no real dollar cost.** Any `$` shown is a *computed*
-  "what this would cost at API rates" figure, not a bill. It MUST be labelled
-  as an equivalent, never as spend.
-- **The 5h/weekly limit % is unknowable.** Anthropic does not publish the cap and
-  it varies by server load. Do NOT render a confident "% of limit" gauge from a
-  hardcoded cap. See "Data honesty rules" below.
-
-## Non-goals (for v1)
-
-- Real-time streaming. A 30–60s poll is fine.
-- Chat / Design / web usage.
-- Auth/login UI. Single user, single panel.
-
----
-
-## Architecture
-
-Three pieces. Build them in this order.
+## Cómo funciona
 
 ```
-[Mac]  ccusage --json ─┐
-                       ├─►  [VPS]  collector (Node/Express) ─► SQLite ─► /api/telemetry ─►  [5" panel] HUD (vanilla HTML)
-[Win]  ccusage --json ─┘
+[Mac]  push.py ──┐  HTTPS + token
+                 ├─► [VPS] hub.py ─► /api/telemetry ─► server.py (PC del panel) ─► HUD kiosko
+[Win]  server.py ┘                                       └─ si el hub no responde: logs locales
 ```
 
-### 1. Collector (runs on each machine)
-- A small script (`collector/collect.sh` or a Node script) that runs:
-  - `ccusage daily --json --instances`  (tokens by day + by project)
-  - `ccusage daily --json --breakdown`  (by model)
-  - `ccusage blocks --json`             (current 5-hour window)
-- Tags the payload with a `machine_id` ("mac-01" / "win-01") and a timestamp.
-- Ships it to the VPS. Scheduled by cron (Mac) / Task Scheduler (Win), every ~5 min.
-- **Do not reimplement JSONL parsing.** Stand on `ccusage --json`.
+- **collector.py** lee los JSONL de forma incremental (desde el último byte leído),
+  **deduplica** por `message.id` + `requestId` y agrega en hora local.
+  `build_snapshot` une varias máquinas: la ventana de 5 h, los totales y la mezcla
+  se calculan sobre la **unión** de mensajes (la ventana es por cuenta, no por máquina).
+- **push.py** (Mac, o cualquier máquina sin panel) envía los últimos 32 días de
+  registros al hub, comprimidos, cada 120 s.
+- **hub.py** (VPS, solo biblioteca estándar) valida y guarda el último reporte de
+  cada máquina en `hub-data/` (sobrevive a reinicios) y sirve la vista unida.
+  Una máquina sin reportar en 10 min aparece OFFLINE.
+- **server.py** (PC del panel) sirve el HUD. Con `config.json` pide los datos al
+  hub y además reporta esta máquina; si el hub no responde, muestra solo los logs
+  locales y lo indica en amarillo ("HUB SIN RESPUESTA"). El token nunca llega al navegador.
+- **history.db** guarda totales por día para que el histórico de 7 días sobreviva
+  si Claude Code purga logs viejos.
+- **launch.ps1** arranca el servidor, localiza el panel ≤1600 px, lo pone a
+  1024×600 (cambio temporal, no persiste) y abre Edge/Chrome en kiosko.
+  Deja un registro en `launch.log`.
 
-### 2. VPS collector + store + API
-- Node/Express on the VPS (same box as the other apps).
-- Receives snapshots from both machines, upserts into **SQLite** (one table for
-  raw snapshots keyed by machine_id + window, plus derived aggregates).
-- Exposes `GET /api/telemetry` returning the shape in "Data contract" below.
-- Lives behind Nginx in the **443 server block** (location block, not the port-80
-  redirect block). Served at e.g. `https://<domain>/telemetry/`.
+## Modo multi-máquina
 
-### 3. HUD frontend
-- The `web/index.html` is the dashboard from `mockup/`, with the mock numbers
-  replaced by a `fetch('/api/telemetry')` + render.
-- Vanilla HTML/CSS/JS, **no build step, no external runtime deps** (self-host the
-  two Google fonts on the VPS instead of CDN if you want zero external calls).
-- Auto-refresh every 30–60s. Point the panel's browser at the URL in kiosk mode.
+**1. VPS** (una vez). Con `config.json` ya creado (paso 2), ejecuta desde la PC
+`bash deploy/install-vps.sh`: copia `hub.py` y `collector.py` a
+`/var/www/apps/claude-dashboard`, deja el token solo en el servidor (chmod 600),
+añade el `location /claude-hub/` a nginx (con backup y `nginx -t`; si falla restaura
+y no recarga) y arranca el hub con pm2. Los pasos manuales equivalentes están en
+`deploy/ecosystem.config.cjs` y `deploy/nginx-claude-hub.conf`. El hub se niega a
+arrancar sin `CLAUDE_HUB_TOKEN` (≥ 24 caracteres).
 
----
+**2. PC del panel (Windows).** Copia `config.example.json` a `config.json` con la URL
+(`https://guarrod.com/claude-hub`), el mismo token y `"machine": "WIN-01"`. Al
+reiniciar `server.py` verás `hub: … (reporting as WIN-01)`.
 
-## Transport decision (pick one — note the tradeoff)
+**3. Mac.** Mismo `config.json` con `"machine": "MAC-01"`. Prueba con `python3 push.py`
+y déjalo corriendo con `deploy/com.claude-dashboard.push.plist` (launchd).
 
-How the collector gets snapshots to the VPS:
+Seguridad: el token es un secreto compartido que da lectura y escritura. La URL
+debe ser `https://` (config.py lo exige salvo localhost); `config.json` y
+`hub-data/` están en `.gitignore`. El hub valida cada fila, limita el tamaño
+(8 MB), el número de máquinas (8) y compara el token en tiempo constante.
 
-- **A. HTTP POST to a collector endpoint** (`POST /api/ingest`). Simple, near
-  real-time. Risk: a public write endpoint — MUST require a shared bearer token
-  (env var, never hardcoded). You flagged publicly-exposed backends before.
-- **B. Git-based** — each machine commits its JSON snapshot to a private repo,
-  VPS `pullall` ingests on a cron. Fits your existing pushall/pullall + git
-  backbone, no public write endpoint. Tradeoff: git history bloats from frequent
-  commits (mitigate by overwriting a single `snapshot.json` and squashing, or a
-  separate throwaway branch).
-
-Default recommendation: **B** for security + fit with your infra, unless you want
-sub-minute freshness, then **A** with a bearer token.
-
----
-
-## Data contract — `GET /api/telemetry`
-
-Annotate each field's trust level in code comments. R = real (from logs),
-C = computed by us, E = estimated/unknowable.
-
-```jsonc
-{
-  "generated_at": "2026-06-25T21:46:00Z",      // R
-  "sync": {                                     // R — about OUR system, not Anthropic
-    "mac-01": { "last_seen": "2026-06-25T21:44:10Z" },
-    "win-01": { "last_seen": "2026-06-25T21:32:00Z" },
-    "vps_ok": true
-  },
-  "today": {
-    "tokens": 4700000,                          // R
-    "by_machine": { "mac-01": 3100000, "win-01": 1600000 }, // R
-    "equiv_usd": 28.40,                          // C — tokens × API list price. NOT a bill.
-    "vs_7d_avg_pct": 18                          // C
-  },
-  "block_5h": {
-    "tokens": 1240000,                          // R
-    "started_at": "2026-06-25T19:30:00Z",        // R
-    "est_window_cap": 2200000,                   // E — optional, manual config only
-    "cap_source": "manual_config"                // E — flag so UI can mark it
-  },
-  "week": {
-    "daily": [ { "date": "2026-06-19", "tokens": 380000 } /* ... */ ],  // R
-    "by_model": { "sonnet": 0.72, "opus": 0.24, "haiku": 0.04 },        // R
-    "by_project": [ { "name": "content-correction", "tokens": 1900000 } ] // R
-  }
-}
-```
-
-## Data honesty rules (enforce in both API and UI)
-
-1. **Never fabricate a limit percentage.** If `est_window_cap` is not set by me in
-   config, the UI shows raw burn (tokens + tokens/hour rate), NOT a "56% of limit".
-2. Any field tagged **E** (estimated) must be visually distinct in the HUD
-   (e.g. an `EST` tag, dimmer styling) so I can tell at a glance it's a guess.
-3. Any field tagged **C** (computed) — especially `equiv_usd` — must carry an
-   "≈ API-rate equiv" label. It is not money I paid.
-4. R fields can be shown plainly.
-
----
-
-## Tech stack
-
-- Node/Express, SQLite (no Postgres for v1 — single user, low volume).
-- Vanilla HTML/CSS/JS frontend. No framework, no bundler.
-- Nginx + SSL on the VPS (443 block). Deploy via existing pushall/pullall.
-- All secrets in env vars (`.env`, gitignored; commit `.env.example`).
-- Git from the first commit. Private repo.
-
-## Suggested repo layout
+## Uso
 
 ```
-claude-telemetry/
-  CLAUDE.md            ← this file
-  collector/
-    collect.sh         ← runs ccusage --json, tags machine, ships to VPS
-  server/
-    index.js           ← Express: ingest + merge + /api/telemetry
-    db.js              ← SQLite schema + queries
-    .env.example
-  web/
-    index.html         ← the HUD (port the mockup, swap mock data for fetch)
-  mockup/
-    claude-code-telemetry.html   ← visual reference (mock data)
+python server.py            # http://127.0.0.1:8787
+python server.py --dev      # recarga el HUD al editar el HTML
+python server.py --no-hub   # ignora config.json: solo logs locales
+python push.py [--loop 120] # reporta esta máquina al hub
+CLAUDE_HUB_TOKEN=… python hub.py   # el hub (en el VPS)
+python collector.py         # imprime el snapshot JSON
+python -m unittest discover -s tests
+dashboard.bat               # servidor + kiosko en el panel
 ```
 
-## Phased plan
+## Reglas de honestidad
 
-- **P1 — one machine, end to end.** ccusage on the Mac → VPS collector → SQLite →
-  `/api/telemetry` (with only `today`, `block_5h`, `by_model`). Verify numbers
-  match `ccusage daily` on the Mac. Git commit.
-- **P2 — second machine + merge.** Add the Windows collector. Make `by_machine`
-  and the merge logic real. Handle stale machines (last_seen old → mark offline).
-- **P3 — wire the HUD.** Replace mock numbers in `web/index.html` with the fetch.
-  Apply the honesty rules (EST/equiv tags, no fake %).
-- **P4 — panel + Nginx.** Add the 443 location block, kiosk the 5" browser at it.
+- **Tokens** = input + output (trabajo real). La caché (~95 % del total bruto) se
+  muestra aparte.
+- **`≈ $`** es el equivalente a precios de API, no un cobro. Un `*` indica que hubo
+  modelos sin precio conocido (p. ej. Fable) y que el monto está incompleto.
+- El arco de 5 h mide **tiempo transcurrido**, no un % de límite: Anthropic no
+  publica el tope.
+- Solo cuenta Claude Code de las máquinas que reportan. Chat y Design no dejan logs locales.
 
-## Open decisions for me (don't guess — ask)
+## Precios y modelos
 
-- Transport: git-based (B) or POST+token (A)?
-- Panel orientation confirmed landscape 800×480?
-- Self-host fonts on VPS, or allow Google Fonts CDN?
-- Do I want a manual `est_window_cap` per plan, or skip the gauge % entirely?
+`collector.py` deriva familia y etiqueta del id real del modelo (`claude-opus-4-8`
+→ "Opus 4.8"). Los precios están en `_P_*`; Sonnet 5.x usa la tarifa de Sonnet
+como estimación y modelos desconocidos no se valorizan.
+
+## Notas
+
+- `preview.png` es una captura con una segunda máquina **simulada** (MAC-01, datos de prueba).
+- `legacy/` contiene la versión anterior pygame/Pillow, sin mantenimiento (ya no
+  funciona con el `collector.py` actual).

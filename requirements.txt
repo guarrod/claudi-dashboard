@@ -1,2 +1,1 @@
-Pillow>=10.0
-pygame>=2.1
+# solo biblioteca estandar; legacy/requirements.txt es para la rama pygame
