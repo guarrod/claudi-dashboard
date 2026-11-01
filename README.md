@@ -1,7 +1,7 @@
 # Claude Code Telemetry
 
 Panel de pared (Hosyond 5", 1024×600) que muestra cuánto Claude Code usas en
-esta máquina: ventana de 5 h, hoy, mezcla de modelos, proyectos y los últimos
+esta máquina: ventana de 5 h, hoy, mezcla de modelos, máquinas y los últimos
 7 días. Todo sale de los logs locales de Claude Code; no hay API oficial de
 consumo de suscripción.
 
@@ -86,6 +86,6 @@ como estimación y modelos desconocidos no se valorizan.
 
 ## Notas
 
-- `preview.png` es una captura real (una sola máquina). El HUD se dibuja a 1024×600 con texto ≥ 18 px (≈ 237 ppi en el panel de 5"): ajusta tamaños en el CSS respetando ese mínimo.
+- `preview.png` es una captura real (una sola máquina). El HUD se dibuja a 1024×600 reales (≈ 237 ppi en el panel de 5") pensado para verse a ~1 m: etiquetas ≥ 22 px, valores 30–58 px, cifras principales 104–112 px. No cabe todo a ese tamaño, así que rota 3 páginas cada 9 s (bloque 5 h · hoy y modelos · máquinas y 7 días); un toque avanza, y `?page=N` fija una.
 - `legacy/` contiene la versión anterior pygame/Pillow, sin mantenimiento (ya no
   funciona con el `collector.py` actual).
