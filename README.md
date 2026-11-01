@@ -86,6 +86,6 @@ como estimación y modelos desconocidos no se valorizan.
 
 ## Notas
 
-- `preview.png` es una captura con una segunda máquina **simulada** (MAC-01, datos de prueba).
+- `preview.png` es una captura real (una sola máquina). El HUD se dibuja a 1024×600 con texto ≥ 18 px (≈ 237 ppi en el panel de 5"): ajusta tamaños en el CSS respetando ese mínimo.
 - `legacy/` contiene la versión anterior pygame/Pillow, sin mantenimiento (ya no
   funciona con el `collector.py` actual).
