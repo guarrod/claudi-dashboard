@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 HOST=${1:-pulsar}
 DIR=/var/www/apps/claude-dashboard
-NGINX=/etc/nginx/sites-available/default
+NGINX=/etc/nginx/sites-enabled/default   # archivo real en uso (no es symlink; sites-available esta desactualizado)
 
 TOKEN=$(python -c "import json;print(json.load(open('config.json'))['token'])")
 [ ${#TOKEN} -ge 24 ] || { echo "token de config.json demasiado corto"; exit 1; }
@@ -32,12 +32,15 @@ module.exports = {
 EOC
 chmod 600 $DIR/ecosystem.config.cjs"
 
-ssh "$HOST" "NGINX=$NGINX bash -s" <<'REMOTE'
+ssh "$HOST" "CONF=$NGINX bash -s" <<'REMOTE'
 set -euo pipefail
-if grep -q 'location /claude-hub/' "$NGINX"; then echo "nginx: location ya presente"; exit 0; fi
-BAK="$NGINX.bak-claude-hub-$(date +%Y%m%d%H%M%S)"
-cp "$NGINX" "$BAK"
-python3 - "$NGINX" <<'PY'
+# OJO: no llamar NGINX a la variable (nginx la usa para sockets heredados) y el
+# backup va FUERA de sites-enabled (nginx incluye todo lo que haya ahi).
+if grep -q 'location /claude-hub/' "$CONF"; then echo "nginx: location ya presente"; exit 0; fi
+mkdir -p /root/nginx-backups
+BAK="/root/nginx-backups/default.bak-claude-hub-$(date +%Y%m%d%H%M%S)"
+cp "$CONF" "$BAK"
+python3 - "$CONF" <<'PY'
 import sys
 p = sys.argv[1]
 s = open(p).read()
@@ -59,7 +62,7 @@ marker = "    listen [::]:443 ssl ipv6only=on;"
 assert s.count(marker) == 1, "bloque 443 no encontrado de forma unica"
 open(p, "w").write(s.replace(marker, block + marker))
 PY
-if nginx -t; then systemctl reload nginx && echo "nginx recargado"; else cp "$BAK" "$NGINX"; echo "nginx -t fallo: backup restaurado"; exit 1; fi
+if nginx -t; then systemctl reload nginx && echo "nginx recargado"; else cp "$BAK" "$CONF"; echo "nginx -t fallo: backup restaurado"; exit 1; fi
 REMOTE
 
 ssh "$HOST" "cd $DIR && (pm2 describe claude-hub >/dev/null 2>&1 && pm2 restart claude-hub --update-env || pm2 start ecosystem.config.cjs) && pm2 save >/dev/null"
