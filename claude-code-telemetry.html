@@ -496,17 +496,18 @@ body::before{
     setTimeout(poll,POLL_MS);
   }
 
-  // ---- auto-reload de desarrollo: solo si el servidor corre con --dev (/version responde) ----
+  // ---- auto-reload: si el HTML cambia en disco el kiosko se recarga solo (cada 5 s) ----
   (function(){
-    var stamp=null, t=setInterval(async function(){
+    var stamp=null;
+    setInterval(async function(){
       try{
         var r=await fetch('/version',{cache:'no-store'});
-        if(!r.ok){clearInterval(t);return;}          // modo producción: dejar de consultar
+        if(!r.ok)return;
         var j=await r.json();
         if(stamp===null){stamp=j.mtime;return;}
         if(j.mtime!==stamp)location.reload();
       }catch(e){}
-    },1500);
+    },5000);
   })();
 
   window.addEventListener('load',function(){ resize(); poll(); });

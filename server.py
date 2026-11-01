@@ -6,7 +6,7 @@ Standard library only.
 
     python server.py                 # http://127.0.0.1:8787
     python server.py --port 9000
-    python server.py --dev           # /version enables auto-reload on HTML edits
+    python server.py --dev           # (sin efecto: el HUD siempre se recarga solo al cambiar el HTML)
 """
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(f.read_bytes(), CTYPES[f.suffix], cache="public, max-age=604800")
             else:
                 self._send(b"not found", "text/plain", 404)
-        elif path == "/version" and DEV:
+        elif path == "/version":
             try:
                 body = json.dumps({"mtime": HTML.stat().st_mtime}).encode("utf-8")
                 self._send(body, "application/json")

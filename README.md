@@ -59,7 +59,7 @@ debe ser `https://` (config.py lo exige salvo localhost); `config.json` y
 
 ```
 python server.py            # http://127.0.0.1:8787
-python server.py --dev      # recarga el HUD al editar el HTML
+python server.py            # el HUD se recarga solo si cambia el HTML
 python server.py --no-hub   # ignora config.json: solo logs locales
 python push.py [--loop 120] # reporta esta máquina al hub
 CLAUDE_HUB_TOKEN=… python hub.py   # el hub (en el VPS)
